@@ -69,11 +69,17 @@ def elaborationWithLasso(XTrain, YTrain):
     return model
 
 def dataElaboration(dataFrame):
-    Y = dataFrame[" shares"].values
-    X = dataFrame.drop([" shares", "url", " timedelta" ," n_tokens_title", " n_tokens_content", " n_unique_tokens"," n_non_stop_words"," n_non_stop_unique_tokens"," num_hrefs"," num_self_hrefs"," num_imgs"," num_videos", " average_token_length", " num_keywords", " data_channel_is_lifestyle", " data_channel_is_entertainment", " data_channel_is_bus", " data_channel_is_socmed", " data_channel_is_tech", " data_channel_is_world" , " kw_min_min", " kw_max_min", " kw_avg_min", " kw_min_max" ," kw_max_max", " kw_avg_max" , " kw_min_avg", " kw_max_avg" , " kw_avg_avg" , " self_reference_min_shares"], axis=1)
+    Y = dataFrame["shares"].values
+    X = dataFrame.drop(["shares", "url", "timedelta" ,"n_tokens_title", "n_tokens_content", "n_unique_tokens","n_non_stop_words","n_non_stop_unique_tokens",
+                        "num_hrefs","num_self_hrefs","num_imgs","num_videos", "average_token_length", "num_keywords", "data_channel_is_lifestyle",
+                        "data_channel_is_entertainment", "data_channel_is_bus", "data_channel_is_socmed", "data_channel_is_tech", "data_channel_is_world" ,
+                        "kw_min_min", "kw_max_min", "kw_avg_min", "kw_min_max" ,"kw_max_max", "kw_avg_max" , "kw_min_avg", "kw_max_avg" , "kw_avg_avg" ,
+                        "self_reference_min_shares"], axis=1)
     XTrain, XVal, YTrain, YVal = slipDataset(X, Y)
     p = elaborationWithoutLasso(XTrain, YTrain)
-    print(p)
+    #print(p)
+    print(p.named_steps["linreg"])
+    print(XTrain.columns)
     print(pd.Series(p.named_steps["linreg"].coef_, XTrain.columns))
 
 def slipDataset(X, Y):
@@ -87,5 +93,5 @@ def slipDataset(X, Y):
 dataset = loadCSVFile(str(getRelativePath()) + str(FILEPATH))
 
 '''ANALISI ESPLORATIVA'''
-exploratoryAnalysis(dataset)
+#exploratoryAnalysis(dataset)
 dataElaboration(dataset)
