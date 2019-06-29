@@ -1,5 +1,6 @@
 import csv
 import pandas as pd
+import numpy as np
 import os.path as fileSystem
 import matplotlib.pyplot as plot
 from sklearn.pipeline import Pipeline
@@ -7,6 +8,7 @@ from sklearn.preprocessing import StandardScaler, PolynomialFeatures
 from sklearn.linear_model import Lasso, LinearRegression
 from sklearn.model_selection import train_test_split
 from sklearn.kernel_ridge import KernelRidge
+from sklearn.metrics import mean_squared_error
 
 FILEPATH = "OnlineNewsPopularity.csv"
 
@@ -48,16 +50,19 @@ Probabilmente perchè di tipo object e quindi non ha competenze per il calcolo d
 def exploratoryAnalysis(dataFrame):
     generalDataFrameInfo(dataFrame)
     print(dataFrame.describe())
-
-    pd.cut(dataFrame[" rate_positive_words"], 4).value_counts().plot.pie()
+    pd.cut(dataFrame["rate_positive_words"], 4).value_counts().plot.pie()
     plot.show()
 
 def elaborationWithoutLasso(XTrain, YTrain):
     prm = Pipeline([("poly",   PolynomialFeatures(degree=2, include_bias=False)),
                     ("scale",  StandardScaler()),   # <- aggiunto
                     ("linreg", LinearRegression(normalize=True))])
+
     prm.fit(XTrain, YTrain)
     return prm
+
+def relative_error(y_true, y_pred):
+    return np.mean(np.abs((y_true - y_pred) / y_true))
 
 def elaborationWithLasso(XTrain, YTrain):
     model = Pipeline([("poly", PolynomialFeatures(degree=2, include_bias=False)),
@@ -78,9 +83,17 @@ def dataElaboration(dataFrame):
     XTrain, XVal, YTrain, YVal = slipDataset(X, Y)
     p = elaborationWithoutLasso(XTrain, YTrain)
     #print(p)
-    print(p.named_steps["linreg"])
+    print(p.named_steps["linreg"].coef_)
     print(XTrain.columns)
-    print(pd.Series(p.named_steps["linreg"].coef_, XTrain.columns))
+
+    printEvalutation(XVal, YVal, p)
+
+    #print(pd.Series(p.named_steps["linreg"].coef_, XTrain.columns))
+
+def printEvalutation(X, Y, model):
+    print("Mean squared error    : {:.5}".format(mean_squared_error(model.predict(X), Y)))
+    print("Relative error        : {:.5%}".format(relative_error(model.predict(X), Y)))
+    print("R-squared coefficient : {:.5}".format(model.score(X, Y)))
 
 def slipDataset(X, Y):
     return train_test_split(X, Y, test_size=1/10, random_state=73)
