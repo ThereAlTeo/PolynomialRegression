@@ -14,6 +14,16 @@ def loadCSVFile(path):
     else:
         print("File non trovato")
 
+'''
+Restituisce l'indice di correlazione tra due feature.
+param:
+feature1, feature2: nparray or series
+returns:
+indice fi correlazione
+'''
+def getCorrelation(feature1, feature2):
+        return np.mean((feature1-feature1.mean()) * (feature2-feature2.mean())) / (feature1.std() * feature2.std())
+
 '''La funzione visualizza il dtype di ogni ottributo del dataFrame passatogli.
 Aggiunge infine anche l'occupazione in memoria.'''
 def generalDataFrameInfo(dataFrame):
