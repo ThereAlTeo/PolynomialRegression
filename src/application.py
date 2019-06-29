@@ -10,13 +10,13 @@ from sklearn.model_selection import train_test_split
 from sklearn.kernel_ridge import KernelRidge
 from sklearn.metrics import mean_squared_error
 
-FILEPATH = "OnlineNewsPopularity.csv"
+FILEPATH = "DataSheet.csv"
 
 '''Zona del programma in cui vengono collocate le funzioni.
 Esse verranno chiamate all'occorrenza all'interno del programma'''
 def loadCSVFile(path):
     if fileSystem.exists(path):
-        return pd.read_csv(path, sep=",")#, dtype={x: "bool" for x in range(30, 39)})
+        return pd.read_csv(path, sep=",", dtype={x: "category" for x in range(2, 10)})
     else:
         print("File non trovato")
 
@@ -50,7 +50,7 @@ Probabilmente perchè di tipo object e quindi non ha competenze per il calcolo d
 def exploratoryAnalysis(dataFrame):
     generalDataFrameInfo(dataFrame)
     print(dataFrame.describe())
-    pd.cut(dataFrame["rate_positive_words"], 4).value_counts().plot.pie()
+    pd.cut(dataFrame["Marital_Status"], 2).value_counts().plot.pie()
     plot.show()
 
 def elaborationWithoutLasso(XTrain, YTrain):
@@ -74,12 +74,8 @@ def elaborationWithLasso(XTrain, YTrain):
     return model
 
 def dataElaboration(dataFrame):
-    Y = dataFrame["shares"].values
-    X = dataFrame.drop(["shares", "url", "timedelta" ,"n_tokens_title", "n_tokens_content", "n_unique_tokens","n_non_stop_words","n_non_stop_unique_tokens",
-                        "num_hrefs","num_self_hrefs","num_imgs","num_videos", "average_token_length", "num_keywords", "data_channel_is_lifestyle",
-                        "data_channel_is_entertainment", "data_channel_is_bus", "data_channel_is_socmed", "data_channel_is_tech", "data_channel_is_world" ,
-                        "kw_min_min", "kw_max_min", "kw_avg_min", "kw_min_max" ,"kw_max_max", "kw_avg_max" , "kw_min_avg", "kw_max_avg" , "kw_avg_avg" ,
-                        "self_reference_min_shares"], axis=1)
+    Y = dataFrame["Purchase"].values
+    X = dataFrame.drop(["Product_Category_3", "Purchase"], axis=1)
     XTrain, XVal, YTrain, YVal = slipDataset(X, Y)
     p = elaborationWithoutLasso(XTrain, YTrain)
     #print(p)
@@ -104,7 +100,15 @@ def slipDataset(X, Y):
 #Esso può essere richiamato e utilizzato dalla funzione, senza l'obbligo di essere passato alle funzioni stesse come argomento.
 #Può essere considerato con scope globale all'interno del progetto.
 dataset = loadCSVFile(str(getRelativePath()) + str(FILEPATH))
+dataset.set_index(["User_ID", "Product_ID"], inplace=True)
+
+print(dataset["Age"].values)
+
+dataset["nuova"] = np.where(dataset["Age"] == "0-17", 1, 0)
+
+print(dataset)
+
 
 '''ANALISI ESPLORATIVA'''
 #exploratoryAnalysis(dataset)
-dataElaboration(dataset)
+#dataElaboration(dataset)
