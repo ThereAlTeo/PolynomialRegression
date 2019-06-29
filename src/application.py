@@ -2,12 +2,16 @@ import csv
 import pandas as pd
 import os.path as fileSystem
 import matplotlib.pyplot as plot
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler, PolynomialFeatures
+from sklearn.linear_model import Lasso, LinearRegression
+from sklearn.model_selection import train_test_split
+from sklearn.kernel_ridge import KernelRidge
 
 FILEPATH = "OnlineNewsPopularity.csv"
 
 '''Zona del programma in cui vengono collocate le funzioni.
 Esse verranno chiamate all'occorrenza all'interno del programma'''
-
 def loadCSVFile(path):
     if fileSystem.exists(path):
         return pd.read_csv(path, sep=",")#, dtype={x: "bool" for x in range(30, 39)})
@@ -48,12 +52,38 @@ def exploratoryAnalysis(dataFrame):
     pd.cut(dataFrame[" rate_positive_words"], 4).value_counts().plot.pie()
     plot.show()
 
+def elaborationWithoutLasso(XTrain, YTrain):
+    prm = Pipeline([("poly",   PolynomialFeatures(degree=2, include_bias=False)),
+                    ("scale",  StandardScaler()),   # <- aggiunto
+                    ("linreg", LinearRegression(normalize=True))])
+    prm.fit(XTrain, YTrain)
+    return prm
+
+def elaborationWithLasso(XTrain, YTrain):
+    model = Pipeline([("poly", PolynomialFeatures(degree=2, include_bias=False)),
+                    ("scale",  StandardScaler()),   # <- aggiunto
+                    ("linreg", Lasso(alpha=2))])
+
+    model.fit(XTrain, YTrain)
+
+    return model
+
+def dataElaboration(dataFrame):
+    Y = dataFrame[" shares"].values
+    X = dataFrame.drop([" shares", "url", " timedelta"], axis=1)
+    XTrain, XVal, YTrain, YVal = slipDataset(X, Y)
+    elaborationWithLasso(XTrain, YTrain)
+
+def slipDataset(X, Y):
+    return train_test_split(X, Y, test_size=1/1000, random_state=73)
+
 #INIZIO DEL PROGRAMMA
 
 #Da verificare il corretto utilizzo di datasheet.
 #Esso può essere richiamato e utilizzato dalla funzione, senza l'obbligo di essere passato alle funzioni stesse come argomento.
 #Può essere considerato con scope globale all'interno del progetto.
-datasheet = loadCSVFile(str(getRelativePath()) + str(FILEPATH))
+dataset = loadCSVFile(str(getRelativePath()) + str(FILEPATH))
 
 '''ANALISI ESPLORATIVA'''
-exploratoryAnalysis(datasheet)
+exploratoryAnalysis(dataset)
+dataElaboration(dataset)
