@@ -85,7 +85,7 @@ def exploratoryAnalysis(dataFrame):
 
 
 def elaborationWithoutLasso(XTrain, YTrain):
-    prm = Pipeline([("poly",   PolynomialFeatures(degree=2, include_bias=False)),
+    prm = Pipeline([("poly",   PolynomialFeatures(degree=2, include_bias=False)), #se viene fatta di terzo grado non basta la memoria
                     ("scale",  StandardScaler()),   # <- aggiunto
                     ("linreg", LinearRegression(normalize=True))])
     prm.fit(XTrain, YTrain)
@@ -108,7 +108,7 @@ def dataElaboration(dataFrame):
     Y = dataFrame["Purchase"].values
     X = dataFrame.drop(["ProductCategory3","ProductCategory2", "Purchase"], axis=1)
     XTrain, XVal, YTrain, YVal = slipDataset(X, Y)
-    p = elaborationWithLasso(XTrain, YTrain)
+    p = elaborationWithoutLasso(XTrain, YTrain)
     #print(p)
     print(p.named_steps["linreg"].coef_)
     print(XTrain.columns)
