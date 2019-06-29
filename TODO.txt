@@ -1,0 +1,4 @@
+TODO list:
+
+-trasformare alcuni parametri da float a binari (is_monday, ...)
+-studiare la correlazione tra feature non lineari

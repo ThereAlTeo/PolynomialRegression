@@ -29,6 +29,13 @@ Aggiunge infine anche l'occupazione in memoria.'''
 def generalDataFrameInfo(dataFrame):
     dataFrame.info(memory_usage="deep")
 
+'''La funzione crea in grafico a dispersione'''
+def showDispersionGraph(feature1, feature2):
+    import matplotlib.pyplot as plt
+    plt.scatter(feature1, feature2)
+    plt.show()
+    return 0
+
 def getRelativePath():
     return fileSystem.dirname(fileSystem.dirname(__file__)) + "\\res\\datasheet\\"
 
