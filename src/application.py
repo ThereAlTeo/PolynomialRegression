@@ -5,7 +5,7 @@ import os.path as fileSystem
 import matplotlib.pyplot as plot
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler, PolynomialFeatures
-from sklearn.linear_model import Lasso, LinearRegression
+from sklearn.linear_model import Lasso, LinearRegression, Ridge
 from sklearn.model_selection import train_test_split
 from sklearn.kernel_ridge import KernelRidge
 from sklearn.metrics import mean_squared_error
@@ -74,33 +74,60 @@ def exploratoryAnalysis(dataFrame):
     pd.cut(dataFrame["MaritalStatus"], 2).value_counts().plot.pie()
     plot.show()
 
-def elaborationWithoutLasso(XTrain, YTrain):
-    prm = Pipeline([("poly",   PolynomialFeatures(degree=2, include_bias=False)), #se viene fatta di terzo grado non basta la memoria
+'''tre diversi metodi di elaborazione: regressione senza vincoli, Ridge e Lasso
+producono diversi modelli di previsione'''
+def elaborationWithRidge(XTrain, YTrain, dg):
+    prm = Pipeline([("poly",   PolynomialFeatures(degree=dg, include_bias=False)), #se viene fatta di terzo grado non basta la memoria
                     ("scale",  StandardScaler()),   # <- aggiunto
-                    ("linreg", LinearRegression(normalize=True))])
+                    ("linreg", Ridge(alpha=1))])
     prm.fit(XTrain, YTrain)
     return prm
+
+def elaborationWithoutRestrain(XTrain, YTrain, dg):
+    prm = Pipeline([("poly",   PolynomialFeatures(degree=dg, include_bias=False)),
+                    ("scale",  StandardScaler()),   # <- aggiunto
+                    ("linreg", LinearRegression())])
+    prm.fit(XTrain, YTrain)
+    return prm
+
+def elaborationWithLasso(XTrain, YTrain, dg):
+    model = Pipeline([("poly", PolynomialFeatures(degree=dg, include_bias=False)),
+                    ("scale",  StandardScaler()),   # <- aggiunto
+                    ("linreg", Lasso(alpha=1, ))])
+    model.fit(XTrain, YTrain)
+    return model
+
 
 def relative_error(y_true, y_pred):
     return np.mean(np.abs((y_true - y_pred) / y_true))
 
-def elaborationWithLasso(XTrain, YTrain):
-    model = Pipeline([("poly", PolynomialFeatures(degree=2, include_bias=False)),
-                    ("scale",  StandardScaler()),   # <- aggiunto
-                    ("linreg", Lasso(alpha=1))])
-    model.fit(XTrain, YTrain)
+'''prototipo: l'idea è quella di utilizare un modello a Lasso di primo grado per determinare
+le variabili inutili, che vengono eliminate dal dataset.
+viene creato successivamente un'altro modello dal dataset modificato
+PS: migliora la previsione dal 36 al 34 % di errore ma non riesco a farlo fare in maniera automatica'''
+def multipleElaboration(XTrain, YTrain):
+    model = elaborationWithLasso(XTrain, YTrain, 1)
+    tmp = pd.Series(model.named_steps["linreg"].coef_, XTrain.columns)
+    for row in tmp:
+        print(row)
+
+        #if (row == 0):
+            #XTrain.drop(tmp[row], axis = 1)
+    print(XTrain["GenderM"])
     return model
+
 
 def dataElaboration(dataFrame):
     Y = dataFrame["Purchase"].values
     X = dataFrame.drop(["ProductCategory3","ProductCategory2", "Purchase"], axis=1)
     XTrain, XVal, YTrain, YVal = slipDataset(X, Y)
-    p = elaborationWithoutLasso(XTrain, YTrain)
+    p = elaborationWithRidge(XTrain, YTrain, 2)
     #print(p)
+    #p = multipleElaboration(XTrain, YTrain)
     print(p.named_steps["linreg"].coef_)
     print(XTrain.columns)
     printEvalutation(XVal, YVal, p)
-    #print(pd.Series(p.named_steps["linreg"].coef_, XTrain.columns))
+    print(pd.Series(p.named_steps["linreg"].coef_, XTrain.columns))
 
 def printEvalutation(X, Y, model):
     print("Mean squared error    : {:.5}".format(mean_squared_error(model.predict(X), Y)))
@@ -114,9 +141,9 @@ def main():
     dataset = loadCSVFile(str(getRelativePath()) + str(FILEPATH))
     dataset.set_index(["UserID", "ProductID"], inplace=True)
     dataset = binarizza(dataset)
-    print(dataset)
+    #print(dataset)
     #exploratoryAnalysis(dataset)
-    #dataElaboration(dataset)
+    dataElaboration(dataset)
 
 #INIZIO DEL PROGRAMMA
 if(__name__ == "__main__"):
