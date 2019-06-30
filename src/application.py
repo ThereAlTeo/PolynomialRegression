@@ -10,9 +10,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.kernel_ridge import KernelRidge
 from sklearn.metrics import mean_squared_error
 
-
 FILEPATH = "DataSheet.csv"
-
 
 '''Zona del programma in cui vengono collocate le funzioni.
 Esse verranno chiamate all'occorrenza all'interno del programma'''
@@ -21,7 +19,6 @@ def loadCSVFile(path):
         return pd.read_csv(path, sep=",", dtype={x: "category" for x in range(2, 10)})
     else:
         print("File non trovato")
-
 
 '''
 Restituisce l'indice di correlazione tra due feature.
@@ -33,12 +30,10 @@ indice fi correlazione
 def getCorrelation(feature1, feature2):
         return np.mean((feature1-feature1.mean()) * (feature2-feature2.mean())) / (feature1.std() * feature2.std())
 
-
 '''La funzione visualizza il dtype di ogni ottributo del dataFrame passatogli.
 Aggiunge infine anche l'occupazione in memoria.'''
 def generalDataFrameInfo(dataFrame):
     dataFrame.info(memory_usage="deep")
-
 
 '''La funzione crea in grafico a dispersione'''
 def showDispersionGraph(feature1, feature2):
@@ -46,7 +41,6 @@ def showDispersionGraph(feature1, feature2):
     plt.scatter(feature1, feature2)
     plt.show()
     return 0
-
 
 '''binarizza le feature categoriche'''
 def binarizza(dataset):
@@ -67,13 +61,10 @@ def binarizza(dataset):
     dataset["StayInCurrentCityYears"] = np.where(dataset["StayInCurrentCityYears"] == "2", 2, dataset["StayInCurrentCityYears"])
     dataset["StayInCurrentCityYears"] = np.where(dataset["StayInCurrentCityYears"] == "1", 1, dataset["StayInCurrentCityYears"])
     pd.to_numeric(dataset["StayInCurrentCityYears"])
-    return dataset.drop(["CityCategory", "Gender","Age"], axis=1)
-
-
+    return dataset.drop(["CityCategory", "Gender", "Age"], axis=1)
 
 def getRelativePath():
     return fileSystem.dirname(fileSystem.dirname(__file__)) + "\\res\\datasheet\\"
-
 
 '''La funzione describe tende ad escludere il primo attributo.
 Probabilmente perchè di tipo object e quindi non ha competenze per il calcolo dei valori.'''
@@ -83,7 +74,6 @@ def exploratoryAnalysis(dataFrame):
     pd.cut(dataFrame["MaritalStatus"], 2).value_counts().plot.pie()
     plot.show()
 
-
 def elaborationWithoutLasso(XTrain, YTrain):
     prm = Pipeline([("poly",   PolynomialFeatures(degree=2, include_bias=False)), #se viene fatta di terzo grado non basta la memoria
                     ("scale",  StandardScaler()),   # <- aggiunto
@@ -91,10 +81,8 @@ def elaborationWithoutLasso(XTrain, YTrain):
     prm.fit(XTrain, YTrain)
     return prm
 
-
 def relative_error(y_true, y_pred):
     return np.mean(np.abs((y_true - y_pred) / y_true))
-
 
 def elaborationWithLasso(XTrain, YTrain):
     model = Pipeline([("poly", PolynomialFeatures(degree=2, include_bias=False)),
@@ -102,7 +90,6 @@ def elaborationWithLasso(XTrain, YTrain):
                     ("linreg", Lasso(alpha=1))])
     model.fit(XTrain, YTrain)
     return model
-
 
 def dataElaboration(dataFrame):
     Y = dataFrame["Purchase"].values
@@ -115,32 +102,22 @@ def dataElaboration(dataFrame):
     printEvalutation(XVal, YVal, p)
     #print(pd.Series(p.named_steps["linreg"].coef_, XTrain.columns))
 
-
 def printEvalutation(X, Y, model):
     print("Mean squared error    : {:.5}".format(mean_squared_error(model.predict(X), Y)))
     print("Relative error        : {:.5%}".format(relative_error(model.predict(X), Y)))
     print("R-squared coefficient : {:.5}".format(model.score(X, Y)))
 
-
 def slipDataset(X, Y):
     return train_test_split(X, Y, test_size=1/10, random_state=73)
 
+def main():
+    dataset = loadCSVFile(str(getRelativePath()) + str(FILEPATH))
+    dataset.set_index(["UserID", "ProductID"], inplace=True)
+    dataset = binarizza(dataset)
+    print(dataset)
+    #exploratoryAnalysis(dataset)
+    #dataElaboration(dataset)
 
 #INIZIO DEL PROGRAMMA
-
-#Da verificare il corretto utilizzo di datasheet.
-#Esso può essere richiamato e utilizzato dalla funzione, senza l'obbligo di essere passato alle funzioni stesse come argomento.
-#Può essere considerato con scope globale all'interno del progetto.
-dataset = loadCSVFile(str(getRelativePath()) + str(FILEPATH))
-dataset.set_index(["UserID", "ProductID"], inplace=True)
-
-print(dataset["Age"].values)
-dataset = binarizza(dataset)
-
-
-
-
-
-'''ANALISI ESPLORATIVA'''
-#exploratoryAnalysis(dataset)
-dataElaboration(dataset)
+if(__name__ == "__main__"):
+    main()
