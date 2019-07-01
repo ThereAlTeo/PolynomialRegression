@@ -93,7 +93,7 @@ def elaborationWithoutRestrain(XTrain, YTrain, dg):
 def elaborationWithLasso(XTrain, YTrain, dg):
     model = Pipeline([("poly", PolynomialFeatures(degree=dg, include_bias=False)),
                     ("scale",  StandardScaler()),   # <- aggiunto
-                    ("linreg", Lasso(alpha=1, ))])
+                    ("linreg", Lasso(alpha=0.5 ))])
     model.fit(XTrain, YTrain)
     return model
 
@@ -104,35 +104,49 @@ def relative_error(y_true, y_pred):
 '''prototipo: l'idea è quella di utilizare un modello a Lasso di primo grado per determinare
 le variabili inutili, che vengono eliminate dal dataset.
 viene creato successivamente un'altro modello dal dataset modificato
-PS: migliora la previsione dal 36 al 34 % di errore ma non riesco a farlo fare in maniera automatica'''
+PS: migliora la previsione dal 36 al 34 % di errore ma non riesco a farlo fare in maniera automatica
+Restituisce in modo da rendere omogeneo il modello con i dati di test'''
 def multipleElaboration(XTrain, YTrain):
     model = elaborationWithLasso(XTrain, YTrain, 1)
     tmp = pd.Series(model.named_steps["linreg"].coef_, XTrain.columns)
-    for row in tmp:
-        print(row)
+    print("....................................")
+    a = []
+    for row in tmp.index:
+        if(tmp[row]==0):
+            a.append(row)
+    XTrain = XTrain.drop(a, axis=1)
+    model = elaborationWithRidge(XTrain, YTrain, 3)
+    return model, a
 
-        #if (row == 0):
-            #XTrain.drop(tmp[row], axis = 1)
-    print(XTrain["GenderM"])
-    return model
 
 
 def dataElaboration(dataFrame):
     Y = dataFrame["Purchase"].values
     X = dataFrame.drop(["ProductCategory3","ProductCategory2", "Purchase"], axis=1)
     XTrain, XVal, YTrain, YVal = slipDataset(X, Y)
-    p = elaborationWithRidge(XTrain, YTrain, 2)
+    #p = elaborationWithRidge(XTrain, YTrain, 2)
     #print(p)
-    #p = multipleElaboration(XTrain, YTrain)
+    p, a = multipleElaboration(XTrain, YTrain)
     print(p.named_steps["linreg"].coef_)
     print(XTrain.columns)
-    printEvalutation(XVal, YVal, p)
-    print(pd.Series(p.named_steps["linreg"].coef_, XTrain.columns))
+    XVal = XVal.drop(a, axis=1)
+    printEvalutation(XVal, YVal, p)ù
+    '''
+    Non funziona ancora
+
+    plot.scatter(XVal["ProductCategory"], YVal),
+    line_x = XVal["ProductCategory1"]
+    line_y = p.predict(XVal);
+    plt.plot(line_x, line_y, c="red", lw=3)
+    '''
+
+
 
 def printEvalutation(X, Y, model):
     print("Mean squared error    : {:.5}".format(mean_squared_error(model.predict(X), Y)))
     print("Relative error        : {:.5%}".format(relative_error(model.predict(X), Y)))
     print("R-squared coefficient : {:.5}".format(model.score(X, Y)))
+
 
 def slipDataset(X, Y):
     return train_test_split(X, Y, test_size=1/10, random_state=73)
