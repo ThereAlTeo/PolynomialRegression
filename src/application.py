@@ -101,10 +101,6 @@ def dataElaboration(dataFrame):
     XTrain, XVal, YTrain, YVal = slipDataset(X, Y)
     p = elaborationWithLasso(XTrain, YTrain)
 
-
-
-
-
     #p = elaborationWithoutLasso(XTrain, YTrain)
     #print(p)
     #print(p.named_steps["linreg"].coef_)
