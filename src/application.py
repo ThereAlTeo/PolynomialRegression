@@ -28,7 +28,19 @@ returns:
 indice fi correlazione
 '''
 def getCorrelation(feature1, feature2):
-        return np.mean((feature1-feature1.mean()) * (feature2-feature2.mean())) / (feature1.std() * feature2.std())
+    return np.mean((feature1-feature1.mean()) * (feature2-feature2.mean())) / (feature1.std() * feature2.std())
+
+def correlationRank(dataset, feature):
+    correlation = []
+    dataset = dataset.drop(["ProductCategory3", "ProductCategory2", "Purchase"], axis=1)
+
+    for a in dataset.columns:
+        #print(a)
+        correlation.append(getCorrelation(dataset[a].astype("int"), feature))
+        #showDispersionGraph(dataset[a].astype("int"), feature)
+    tmp = pd.Series(correlation, dataset.columns)
+    tmp.sort_values(ascending=False, inplace=True)
+    return tmp
 
 '''La funzione visualizza il dtype di ogni ottributo del dataFrame passatogli.
 Aggiunge infine anche l'occupazione in memoria.'''
@@ -40,7 +52,6 @@ def showDispersionGraph(feature1, feature2):
     import matplotlib.pyplot as plt
     plt.scatter(feature1, feature2)
     plt.show()
-    return 0
 
 '''binarizza le feature categoriche'''
 def binarizza(dataset):
@@ -78,7 +89,7 @@ def exploratoryAnalysis(dataFrame):
 producono diversi modelli di previsione'''
 def elaborationWithRidge(XTrain, YTrain, dg):
     prm = Pipeline([#("poly",   PolynomialFeatures(degree=dg, include_bias=False)), #se viene fatta di terzo grado non basta la memoria
-                    ("scaler",  StandardScaler()),   # <- aggiunto , n_jobs=-1  
+                    ("scaler",  StandardScaler()),   # <- aggiunto , n_jobs=-1
                     ("model",  Perceptron(penalty="l2", alpha=0.005, max_iter=10))
                     ])
     prm.fit(XTrain, YTrain)
@@ -145,20 +156,12 @@ def dataElaboration(dataFrame):
     XTrain, XVal, YTrain, YVal = slipDataset(X, Y)
     #p = elaborationWithRidge(XTrain, YTrain, 2)
     #print(p)
-    p, a = multipleElaboration(XTrain, YTrain)
+    p= elaborationWithoutRestrain(XTrain, YTrain, 3)
     #print(p.named_steps["linreg"].coef_)
     print(XTrain.columns)
-    XVal = XVal.drop(a, axis=1)
+    #XVal = XVal.drop(a, axis=1)
     printEvalutation(XVal, YVal, p)
     #plot_model_on_data(XVal, YVal, p)
-    '''
-    Non funziona ancora
-
-    plot.scatter(XVal["ProductCategory"], YVal),
-    line_x = XVal["ProductCategory1"]
-    line_y = p.predict(XVal);
-    plt.plot(line_x, line_y, c="red", lw=3)
-    '''
 
 
 
@@ -177,7 +180,11 @@ def main():
     dataset = binarizza(dataset)
     #print(dataset)
     #exploratoryAnalysis(dataset)
+    Cor = correlationRank(dataset,dataset["Purchase"])[4:]
+    dataset.drop(Cor.index, axis=1)
     dataElaboration(dataset)
+
+
 
 #INIZIO DEL PROGRAMMA
 if(__name__ == "__main__"):
