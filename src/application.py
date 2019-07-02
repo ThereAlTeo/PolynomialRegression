@@ -10,7 +10,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.kernel_ridge import KernelRidge
 from sklearn.metrics import mean_squared_error
 
-FILEPATH = "DataSheet.csv"
+FILEPATH = "day.csv"
 
 '''Zona del programma in cui vengono collocate le funzioni.
 Esse verranno chiamate all'occorrenza all'interno del programma'''
@@ -25,22 +25,22 @@ Restituisce l'indice di correlazione tra due feature.
 param:
 feature1, feature2: nparray or series
 returns:
-indice fi correlazione
+indice di correlazione
 '''
 def getCorrelation(feature1, feature2):
     return np.mean((feature1-feature1.mean()) * (feature2-feature2.mean())) / (feature1.std() * feature2.std())
 
 def correlationRank(dataset, feature):
     correlation = []
-    dataset = dataset.drop(["ProductCategory3", "ProductCategory2", "Purchase"], axis=1)
-
+    dataset = dataset.drop(["casual", "registered"], axis=1)
     for a in dataset.columns:
-        #print(a)
-        correlation.append(getCorrelation(dataset[a].astype("int"), feature))
-        #showDispersionGraph(dataset[a].astype("int"), feature)
+        print(a)
+        correlation.append(getCorrelation(dataset[a].astype("float"), feature))
+        #plot_model_on_data(dataset[a].astype("float"), feature)
+        #showHistogram(dataset[a].astype("int"))
     tmp = pd.Series(correlation, dataset.columns)
     tmp.sort_values(ascending=False, inplace=True)
-    return tmp
+    print( tmp)
 
 '''La funzione visualizza il dtype di ogni ottributo del dataFrame passatogli.
 Aggiunge infine anche l'occupazione in memoria.'''
@@ -53,7 +53,7 @@ def showDispersionGraph(feature1, feature2):
     plt.scatter(feature1, feature2)
     plt.show()
 
-'''binarizza le feature categoriche'''
+'''binarizza le feature categoriche
 def binarizza(dataset):
     dataset["Age0-17"] = np.where(dataset["Age"] == "0-17", 1, 0)
     dataset["Age18-25"] = np.where(dataset["Age"] == "18-25", 1, 0)
@@ -73,24 +73,26 @@ def binarizza(dataset):
     dataset["StayInCurrentCityYears"] = np.where(dataset["StayInCurrentCityYears"] == "1", 1, dataset["StayInCurrentCityYears"])
     pd.to_numeric(dataset["StayInCurrentCityYears"])
     return dataset.drop(["CityCategory", "Gender", "Age"], axis=1)
+'''
 
 def getRelativePath():
     return fileSystem.dirname(fileSystem.dirname(__file__)) + "\\res\\datasheet\\"
 
 '''La funzione describe tende ad escludere il primo attributo.
-Probabilmente perchè di tipo object e quindi non ha competenze per il calcolo dei valori.'''
+Probabilmente perchè di tipo object e quindi non ha competenze per il calcolo dei valori.
 def exploratoryAnalysis(dataFrame):
     generalDataFrameInfo(dataFrame)
     print(dataFrame.describe())
     pd.cut(dataFrame["MaritalStatus"], 2).value_counts().plot.pie()
     plot.show()
+'''
 
 '''tre diversi metodi di elaborazione: regressione senza vincoli, Ridge e Lasso
 producono diversi modelli di previsione'''
-def elaborationWithRidge(XTrain, YTrain, dg):
+def elaborationWithPerceptron(XTrain, YTrain, dg):
     prm = Pipeline([#("poly",   PolynomialFeatures(degree=dg, include_bias=False)), #se viene fatta di terzo grado non basta la memoria
                     ("scaler",  StandardScaler()),   # <- aggiunto , n_jobs=-1
-                    ("model",  Perceptron(penalty="l2", alpha=0.005, max_iter=10))
+                    ("model",  Perceptron(penalty="l2", alpha=0.0005, max_iter=10))
                     ])
     prm.fit(XTrain, YTrain)
     return prm
@@ -98,7 +100,7 @@ def elaborationWithRidge(XTrain, YTrain, dg):
 def elaborationWithElasticNetdef(XTrain, YTrain, dg):
     prm = Pipeline([#("poly",   PolynomialFeatures(degree=dg, include_bias=False)), #se viene fatta di terzo grado non basta la memoria
                      ("scale",  StandardScaler()),
-                     ("regr",  KernelRidge(alpha=10, kernel="poly", degree=1))])
+                     ("regr",  ElasticNet(alpha=8, l1_ratio=1))])
     prm.fit(XTrain, YTrain)
     return prm
 
@@ -112,9 +114,21 @@ def elaborationWithoutRestrain(XTrain, YTrain, dg):
 def elaborationWithLasso(XTrain, YTrain, dg):
     model = Pipeline([("poly", PolynomialFeatures(degree=dg, include_bias=False)),
                     ("scale",  StandardScaler()),   # <- aggiunto
-                    ("linreg", Lasso(alpha=2))])
+                    ("linreg", Lasso(alpha=8, tol=0.001))])
     model.fit(XTrain, YTrain)
     return model
+
+def elaborationWithRidge(XTrain, YTrain, dg):
+    model = Pipeline([("poly", PolynomialFeatures(degree=dg, include_bias=False)),
+                    ("scale",  StandardScaler()),   # <- aggiunto
+                    ("linreg", Ridge(alpha=5))])
+    model.fit(XTrain, YTrain)
+    return model
+
+
+def showHistogram(feature):
+    feature.plot.hist(bins=20)
+    plot.show()
 
 def plot_model_on_data(x, y, model=None):
     plot.scatter(x, y)
@@ -125,7 +139,7 @@ def plot_model_on_data(x, y, model=None):
         plot.plot(line_x, line_y, c="red", lw=3)
         plot.xlim(xlim); plt.ylim(ylim)
     plot.grid()
-    plot.xlabel("Temperatura (°C)"); plt.ylabel("Consumi (GW)")
+    plot.xlabel("Temperatura (°C)"); plot.ylabel("Consumi (GW)")
     plot.show()
 
 def relative_error(y_true, y_pred):
@@ -139,30 +153,42 @@ Restituisce in modo da rendere omogeneo il modello con i dati di test'''
 def multipleElaboration(XTrain, YTrain):
     model = elaborationWithLasso(XTrain, YTrain, 1)
     tmp = pd.Series(model.named_steps["linreg"].coef_, XTrain.columns)
-    print("....................................")
     a = []
     for row in tmp.index:
         if(tmp[row]==0):
             a.append(row)
     XTrain = XTrain.drop(a, axis=1)
-    model = elaborationWithRidge(XTrain, YTrain, 1)
+    model = elaborationWithLasso(XTrain, YTrain, 4)
     return model, a
 
 
 
 def dataElaboration(dataFrame):
-    Y = dataFrame["Purchase"].values
-    X = dataFrame.drop(["ProductCategory3", "ProductCategory2", "Purchase"], axis=1)
+    Y = dataFrame["cnt"]
+    X = dataFrame.drop(["casual", "registered", "cnt"], axis=1)
     XTrain, XVal, YTrain, YVal = slipDataset(X, Y)
-    #p = elaborationWithRidge(XTrain, YTrain, 2)
-    #print(p)
-    p= elaborationWithoutRestrain(XTrain, YTrain, 3)
-    #print(p.named_steps["linreg"].coef_)
-    print(XTrain.columns)
-    #XVal = XVal.drop(a, axis=1)
+    print("Lasso")
+    p = elaborationWithLasso(XTrain, YTrain, 6)
     printEvalutation(XVal, YVal, p)
-    #plot_model_on_data(XVal, YVal, p)
-
+    #plot.scatter( XVal["atemp"],p.predict(XVal),c="red")
+    #plot.scatter( XVal["atemp"], YVal, c="blue")
+    print("no Restain")
+    p = elaborationWithoutRestrain(XTrain, YTrain, 2)
+    printEvalutation(XVal, YVal, p)
+    print("Net")
+    p = elaborationWithElasticNetdef(XTrain, YTrain, 6)
+    printEvalutation(XVal, YVal, p)
+    print("Ridge")
+    p = elaborationWithRidge(XTrain, YTrain, 4)
+    printEvalutation(XVal, YVal, p)
+    print("Perceptron")
+    p = elaborationWithPerceptron(XTrain, YTrain, 4)
+    printEvalutation(XVal, YVal, p)
+    print("multiple")
+    p , a= multipleElaboration(XTrain, YTrain)
+    XVal = XVal.drop(a, axis=1)
+    printEvalutation(XVal, YVal, p)
+    return p
 
 
 def printEvalutation(X, Y, model):
@@ -176,15 +202,22 @@ def slipDataset(X, Y):
 
 def main():
     dataset = loadCSVFile(str(getRelativePath()) + str(FILEPATH))
-    dataset.set_index(["UserID", "ProductID"], inplace=True)
-    dataset = binarizza(dataset)
+    dataset.set_index(["dteday"], inplace=True)
+    #dataset = binarizza(dataset)
+    dataset = dataset.drop(["instant"], axis=1)
+
     #print(dataset)
     #exploratoryAnalysis(dataset)
-    Cor = correlationRank(dataset,dataset["Purchase"])[4:]
-    dataset.drop(Cor.index, axis=1)
-    dataElaboration(dataset)
-
-
+    correlationRank(dataset.drop(["cnt"], axis=1),dataset["cnt"])
+    #a = []
+    #print(Cor.index)
+    #for row in Cor.index:
+    #    a.append(row)
+    #dataset = dataset.drop(a, axis=1)
+    #print(dataset)
+    model = dataElaboration(dataset)
+    #tmp = pd.Series(model.named_steps["linreg"].coef_, dataset.drop(["ProductCategory3", "ProductCategory2", "Purchase"], axis=1).columns)
+    #print(tmp)
 
 #INIZIO DEL PROGRAMMA
 if(__name__ == "__main__"):

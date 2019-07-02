@@ -2,3 +2,17 @@ TODO list:
 
 -trasformare alcuni parametri da float a binari (is_monday, ...)
 -studiare la correlazione tra feature non lineari
+Relative error        : 19.40936%
+R-squared coefficient : 0.86663
+Mean squared error    : 4.8095e+05
+Relative error        : 18.29450%
+R-squared coefficient : 0.88459
+Relative error        : 14.17535%
+R-squared coefficient : 0.89567
+Relative error        : 16.01830%
+R-squared coefficient : 0.87042
+best 6 grado 8 alpha lasso
+Mean squared error    : 4.3704e+05
+Relative error        : 13.74563%
+R-squared coefficient : 0.89512
+g6a10
