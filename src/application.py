@@ -6,7 +6,7 @@ import matplotlib.pyplot as plot
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler, PolynomialFeatures
 from sklearn.linear_model import Lasso, LinearRegression, Ridge, ElasticNet, LogisticRegression, Perceptron
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, KFold, cross_val_score
 from sklearn.kernel_ridge import KernelRidge
 from sklearn.metrics import mean_squared_error
 
@@ -111,11 +111,12 @@ def elaborationWithoutRestrain(XTrain, YTrain, dg):
     prm.fit(XTrain, YTrain)
     return prm
 
-def elaborationWithLasso(XTrain, YTrain, dg):
+def elaborationWithLasso(dg, XTrain=None, YTrain=None):
     model = Pipeline([("poly", PolynomialFeatures(degree=dg, include_bias=False)),
                     ("scale",  StandardScaler()),   # <- aggiunto
                     ("linreg", Lasso(alpha=8, tol=0.001))])
-    model.fit(XTrain, YTrain)
+    if(XTrain != None and YTrain !=None):
+        model.fit(XTrain, YTrain)
     return model
 
 def elaborationWithRidge(XTrain, YTrain, dg):
@@ -158,17 +159,24 @@ def multipleElaboration(XTrain, YTrain):
         if(tmp[row]==0):
             a.append(row)
     XTrain = XTrain.drop(a, axis=1)
-    model = elaborationWithLasso(XTrain, YTrain, 4)
+    model = elaborationWithLasso(4, XTrain, YTrain)
     return model, a
 
-
+def KFold(X, Y):
+    kf = KFold(n_splits=5, shuffle=True, random_state=73)
+    model = elaborationWithLasso(dg=6)
+    scores = cross_val_score(model, X, Y, cv=kf)
+    print(scores)
 
 def dataElaboration(dataFrame):
     Y = dataFrame["cnt"]
     X = dataFrame.drop(["casual", "registered", "cnt"], axis=1)
     XTrain, XVal, YTrain, YVal = slipDataset(X, Y)
+
+    KFold(X, Y)
+
     print("Lasso")
-    p = elaborationWithLasso(XTrain, YTrain, 6)
+    p = elaborationWithLasso(6, XTrain, YTrain)
     printEvalutation(XVal, YVal, p)
     #plot.scatter( XVal["atemp"],p.predict(XVal),c="red")
     #plot.scatter( XVal["atemp"], YVal, c="blue")
