@@ -6,9 +6,10 @@ import matplotlib.pyplot as plot
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler, PolynomialFeatures
 from sklearn.linear_model import Lasso, LinearRegression, Ridge, ElasticNet, LogisticRegression, Perceptron
-from sklearn.model_selection import train_test_split, KFold, cross_val_score
+from sklearn.model_selection import train_test_split, KFold, cross_val_score,GridSearchCV
 from sklearn.kernel_ridge import KernelRidge
 from sklearn.metrics import mean_squared_error
+
 
 FILEPATH = "day.csv"
 
@@ -87,7 +88,6 @@ def testingElaboration(XTrain, YTrain, XVal, YVal):
     model.fit(XTrain, YTrain)
     printEvalutation(XVal, YVal, model)
 
-
 '''l'idea è quella di utilizare un modello a Lasso di primo grado per determinare
 le variabili inutili, che vengono eliminate dal dataset.'''
 
@@ -102,6 +102,74 @@ def showZerosFeatures(XTrain, YTrain):
             a.append(row)
     print(a)
 
+def testingGridSerach(XTrain, YTrain, XVal, YVal):
+
+    print("Lasso")
+    parLasso = {
+        "poly__degree": [2,6,8],
+        "linreg__alpha":  [2,6,8]
+    }
+    model = Pipeline([("poly", PolynomialFeatures(include_bias=False)),
+                    ("scale",  StandardScaler()),   # <- aggiunto
+                    ("linreg", Lasso(tol=0.001))])
+    gs = GridSearchCV(model, param_grid=parLasso)
+    gs.fit(XTrain, YTrain)
+    print(gs.best_params_)
+    printEvalutation(XVal, YVal, gs)
+
+#    print("no Restain")
+#    parNR = {
+#        "poly__degree": [1,2,6,8],
+#    }
+#    model = Pipeline([("poly",   PolynomialFeatures(include_bias=False)),
+#                    ("scale",  StandardScaler()),
+#                    ("linreg", LinearRegression())])
+#    gs = GridSearchCV(model, param_grid=parNR)
+#    gs.fit(XTrain, YTrain)
+#    print(gs.best_params_)
+#    printEvalutation(XVal, YVal, gs)
+#
+#    print("Net")
+#    ''' Capire se nella funzione va messo PolynomialFeatures'''
+#    parNet = {
+#        "regr__alpha": [1,2,6,8],
+#        "regr__l1_ratio": [0.1, 0.5, 1.0]
+#    }
+#    model = Pipeline([("scale",  StandardScaler()),
+#                    ("regr",  ElasticNet())])
+#    gs = GridSearchCV(model, param_grid=parNet)
+#    gs.fit(XTrain, YTrain)
+#    print(gs.best_params_)
+#    printEvalutation(XVal, YVal, gs)
+#
+#    print("Ridge")
+#    parRidge = {
+#        "poly__degree": [1,2,6,8],
+#        "linereg__alpha":  [1,2,6,8]
+#    }
+#    ''' Capire se nella funzione va messo PolynomialFeatures'''
+#    model = Pipeline([("poly", PolynomialFeatures(include_bias=False)),
+#                    ("scale",  StandardScaler()),   # <- aggiunto
+#                    ("linreg", Ridge())])
+#    gs = GridSearchCV(model, param_grid=par)
+#    gs.fit(XTrain, YTrain)
+#    print(gs.best_params_)
+#    printEvalutation(XVal, YVal, gs)
+#
+#    '''non ho internet e non so quali sono i valori da dare ad alpha'''
+#    #print("Perceptron")
+#    #parNR = {
+#    #    "scaler__alpha": [1,2,6,8],
+#    #}
+#    #Pipeline([("scaler",  StandardScaler()),
+#    #        ("model",  Perceptron(penalty="l2", alpha=0.0005, max_iter=10))])
+#    #gs = GridSearchCV(model, param_grid=par)
+#    #gs.fit(XTrain, YTrain)
+#    #print(gs.best_params_)
+#    #printEvalutation(XVal, YVal, gs)
+
+
+
 def slipDataset(X, Y):
     return train_test_split(X, Y, test_size=0.33, random_state=73)
 
@@ -114,7 +182,7 @@ def dataElaboration(dataFrame):
     showZerosFeatures(XTrain, YTrain)
 
     print("Vengono visualizzati i risultati ottenuti con alcuni algoritmi per la generazioni di modelli di regressione.")
-    testingElaboration(XTrain, YTrain, XVal, YVal);
+    testingGridSerach(XTrain, YTrain, XVal, YVal);
 
     print("Viene testata la Pipeline applicato il LASSO, poiche' ritenuta la migliore a livello prestazionale.")
     print("Il K-Fold permette di suddividere il set in n parti, aventi la stessa grandezza, e di compiere le operazioni di Train e Validation su di essere.")
