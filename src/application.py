@@ -18,14 +18,20 @@ FILEPATH = "day.csv"
 #    plt.scatter(feature1, feature2)
 #    plt.show()
 
+'''sei diversi metodi di elaborazione: regressione senza vincoli, Ridge e Lasso
+producono diversi modelli di previsione'''
+
+def elaborationWithLasso(degeePipe, alphaPipe):
+    return Pipeline([("poly", PolynomialFeatures(degree=degeePipe, include_bias=False)),
+                    ("scale",  StandardScaler()),   # <- aggiunto
+                    ("linreg", Lasso(alpha=alphaPipe, tol=0.001))])
+
 def ElaborationKFold(X, Y):
     kf = KFold(n_splits=5, shuffle=True, random_state=73)
     model = elaborationWithLasso(6, 8)
     scores = cross_val_score(model, X, Y, cv=kf)
     print(scores)
 
-'''tre diversi metodi di elaborazione: regressione senza vincoli, Ridge e Lasso
-producono diversi modelli di previsione'''
 def elaborationWithPerceptron(XTrain, YTrain, dg):
     return Pipeline([("scaler",  StandardScaler()),
                     ("model",  Perceptron(penalty="l2", alpha=0.0005, max_iter=10))])
@@ -53,10 +59,12 @@ def printEvalutation(X, Y, model):
     print("R-squared coefficient : {:.5}".format(model.score(X, Y)))
 
 def testingElaboration(XTrain, YTrain, XVal, YVal):
+
     print("Lasso")
     model = elaborationWithLasso(6, 8)
     model.fit(XTrain, YTrain)
     printEvalutation(XVal, YVal, model)
+
     print("no Restain")
     model = elaborationWithoutRestrain(2)
     model.fit(XTrain, YTrain)
@@ -73,21 +81,16 @@ def testingElaboration(XTrain, YTrain, XVal, YVal):
     model = elaborationWithRidge(4)
     model.fit(XTrain, YTrain)
     printEvalutation(XVal, YVal, model)
+
     print("Perceptron")
     model = elaborationWithPerceptron(XTrain, YTrain, 4)
     model.fit(XTrain, YTrain)
     printEvalutation(XVal, YVal, model)
 
-def elaborationWithLasso(degeePipe, alphaPipe):
-    return Pipeline([("poly", PolynomialFeatures(degree=degeePipe, include_bias=False)),
-                    ("scale",  StandardScaler()),   # <- aggiunto
-                    ("linreg", Lasso(alpha=alphaPipe, tol=0.001))])
 
-'''prototipo: l'idea è quella di utilizare un modello a Lasso di primo grado per determinare
-le variabili inutili, che vengono eliminate dal dataset.
-viene creato successivamente un'altro modello dal dataset modificato
-PS: migliora la previsione dal 36 al 34 % di errore ma non riesco a farlo fare in maniera automatica
-Restituisce in modo da rendere omogeneo il modello con i dati di test'''
+'''l'idea è quella di utilizare un modello a Lasso di primo grado per determinare
+le variabili inutili, che vengono eliminate dal dataset.'''
+
 def showZerosFeatures(XTrain, YTrain):
     model = elaborationWithLasso(1, 8)
     model.fit(XTrain, YTrain)
