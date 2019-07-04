@@ -10,14 +10,18 @@ from sklearn.model_selection import train_test_split, KFold, cross_val_score,Gri
 from sklearn.kernel_ridge import KernelRidge
 from sklearn.metrics import mean_squared_error
 
-
 FILEPATH = "day.csv"
 
 '''La funzione crea in grafico a dispersione'''
 #def showDispersionGraph(feature1, feature2):
 #    import matplotlib.pyplot as plt
 #    plt.scatter(feature1, feature2)
-#    plt.show()
+#    plt.show(
+#plot.scatter(ds["instant"], ds["cnt"])
+#line_y = model.predict(X)
+#plot.plot(ds["instant"], line_y, c="red", lw=3)
+#plot.grid()
+#plot.show()
 
 '''sei diversi metodi di elaborazione: regressione senza vincoli, Ridge e Lasso
 producono diversi modelli di previsione'''
