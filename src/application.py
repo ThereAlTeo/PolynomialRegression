@@ -21,26 +21,23 @@ FILEPATH = "day.csv"
 '''sei diversi metodi di elaborazione: regressione senza vincoli, Ridge e Lasso
 producono diversi modelli di previsione'''
 
-def elaborationWithLasso(degeePipe, alphaPipe):
+def elaborationWithLasso(degeePipe=1, alphaPipe=0):
     return Pipeline([("poly", PolynomialFeatures(degree=degeePipe, include_bias=False)),
-                    ("scale",  StandardScaler()),   # <- aggiunto
-                    ("linreg", Lasso(alpha=alphaPipe, tol=0.001))])
+                    ("scale",  StandardScaler()),
+                    ("linreg", Lasso(alpha=alphaPipe, max_iter=6000, tol=0.005))])
 
-def elaborationWithPerceptron(XTrain, YTrain, dg):
-    return Pipeline([("scaler",  StandardScaler()),
-                    ("model",  Perceptron(penalty="l2", alpha=0.0005, max_iter=10))])
+def elaborationWithRidge():
+    return Pipeline([("poly", PolynomialFeatures(include_bias=False)),
+                    ("scale",  StandardScaler()),
+                    ("linreg", Ridge())])
 
-def elaborationWithRidge(degeePipe):
-    return Pipeline([("poly", PolynomialFeatures(degree=degeePipe, include_bias=False)),
-                    ("scale",  StandardScaler()),   # <- aggiunto
-                    ("linreg", Ridge(alpha=5))])
+def elaborationWithElasticNet():
+    return Pipeline([("poly",   PolynomialFeatures(include_bias=False)),
+                     ("scale",  StandardScaler()),
+                     ("linreg",  ElasticNet(tol = 0.05, max_iter = 6000))])
 
-def elaborationWithElasticNetdef(degeePipe=1):
-    return Pipeline([("scale",  StandardScaler()),
-                     ("regr",  ElasticNet(alpha=8, l1_ratio=1))])
-
-def elaborationWithoutRestrain(degeePipe):
-    return Pipeline([("poly",   PolynomialFeatures(degree=degeePipe, include_bias=False)),
+def elaborationWithoutRestrain():
+    return Pipeline([("poly",  PolynomialFeatures(include_bias=False)),
                     ("scale",  StandardScaler()),
                     ("linreg", LinearRegression())])
 
@@ -65,10 +62,6 @@ def showZerosFeatures(XTrain, YTrain):
             a.append(row)
     print(a)
 
-def showHistogram(feature):
-    feature.plot.hist(bins=20)
-    plot.show()
-
 def plotModelOnData(x, y, XAxisName, YAxisName, model=None):
     plot.scatter(x, y)
     if model is not None:
@@ -90,11 +83,14 @@ def correlationRank(dataset, feature):
     for a in dataset.columns:
         print(a)
         correlation.append(getCorrelation(dataset[a].astype("float"), feature))
-        #plotModelOnData(dataset[a].astype("float"), feature, a, "Byke Rent")
-        #showHistogram(dataset[a].astype("int"))
+        plotModelOnData(dataset[a].astype("float"), feature, a, "Byke Rent")
     tmp = pd.Series(correlation, dataset.columns)
     tmp.sort_values(ascending=False, inplace=True)
     print( tmp)
+
+def EvalutationTable(results):
+    return pd.DataFrame(results.cv_results_).sort_values("mean_test_score", ascending=False)
+
 
 '''Funzioni di elaborazione'''
 
@@ -111,21 +107,15 @@ def testingElaboration(XTrain, YTrain, XVal, YVal):
     printEvalutation(XVal, YVal, model)
 
     print("Net")
-    ''' Capire se nella funzione va messo PolynomialFeatures'''
     model = elaborationWithElasticNetdef()
     model.fit(XTrain, YTrain)
     printEvalutation(XVal, YVal, model)
 
     print("Ridge")
-    ''' Capire se nella funzione va messo PolynomialFeatures'''
     model = elaborationWithRidge(4)
     model.fit(XTrain, YTrain)
     printEvalutation(XVal, YVal, model)
 
-    print("Perceptron")
-    model = elaborationWithPerceptron(XTrain, YTrain, 4)
-    model.fit(XTrain, YTrain)
-    printEvalutation(XVal, YVal, model)
 
 def ElaborationKFold(X, Y):
     kf = KFold(n_splits=5, shuffle=True, random_state=73)
@@ -133,74 +123,56 @@ def ElaborationKFold(X, Y):
     scores = cross_val_score(model, X, Y, cv=kf)
     print(scores)
 
-def testingGridSerach(XTrain, YTrain, XVal, YVal):
 
+def testingGridSerach(XTrain, YTrain, XVal, YVal):
     print("Lasso")
     parLasso = {
-        "poly__degree": [1,6,5],
-        "linreg__alpha":  [1,2,8]
+        "poly__degree": [1,6,8],
+        "linreg__alpha":  [1,5,8]
     }
-    modelL = Pipeline([("poly", PolynomialFeatures(include_bias=False)),
-                    ("scale",  StandardScaler()),   # <- aggiunto
-                    ("linreg", Lasso(tol=0.001))])
-    gsL = GridSearchCV(modelL, param_grid=parLasso)
-    gsL.fit(XTrain, YTrain)
-    print(gsL.best_params_)
-    printEvalutation(XVal, YVal, gs)
+    LassoModel = elaborationWithLasso()
+    lassoGridSearch = GridSearchCV(LassoModel, param_grid=parLasso)
+    lassoGridSearch.fit(XTrain, YTrain)
+    print(lassoGridSearch.best_params_)
+    EvalutationTable(lassoGridSearch)
+    printEvalutation(XVal, YVal, lassoGridSearch)
 
-    print("no Restain")
+    print("No Restain")
     parNR = {
-        "poly__degree": [1,2],
+       "poly__degree": [1,2],
     }
-    modelNR = Pipeline([("poly",   PolynomialFeatures(include_bias=False)),
-                    ("scale",  StandardScaler()),
-                    ("linreg", LinearRegression())])
-    gsNR = GridSearchCV(modelNR, param_grid=parNR)
-    gsNR.fit(XTrain, YTrain)
-    print(gs.best_params_)
-    printEvalutation(XVal, YVal, gsNR)
+    NRmodel = elaborationWithoutRestrain()
+    NRGridSearch = GridSearchCV(NRmodel, param_grid=parNR)
+    NRGridSearch.fit(XTrain, YTrain)
+    EvalutationTable(NRGridSearch)
+    print(NRGridSearch.best_params_)
 
-    print("Net")
-    ''' Capire se nella funzione va messo PolynomialFeatures'''
+    print("ElasticNet")
     parNet = {
         "poly__degree": [1,2,6],
         "linreg__alpha": [1,2,8],
         "linreg__l1_ratio": [0.1, 0.5, 1.0]
     }
-    modelNE = Pipeline([("poly",   PolynomialFeatures(include_bias=False)),
-                    ("scale",  StandardScaler()),
-                    ("regr",  ElasticNet())])
-    gsNE = GridSearchCV(modelNE, param_grid=parNet)
-    gsNE.fit(XTrain, YTrain)
-    print(gs.best_params_)
-    printEvalutation(XVal, YVal, gsNE)
+    NETmodel = elaborationWithElasticNet()
+    ENgridSearch = GridSearchCV(NETmodel, param_grid=parNet)
+    ENgridSearch.fit(XTrain, YTrain)
+    print(ENgridSearch.best_params_)
+    EvalutationTable(ENgridSearch)
+    printEvalutation(XVal, YVal, ENgridSearch)
+
 
     print("Ridge")
     parRidge = {
         "poly__degree": [1,6,8],
         "linreg__alpha":  [1,2,6]
     }
-    ''' Capire se nella funzione va messo PolynomialFeatures'''
-    model = Pipeline([("poly", PolynomialFeatures(include_bias=False)),
-                    ("scale",  StandardScaler()),   # <- aggiunto
-                    ("linreg", Ridge())])
-    gs = GridSearchCV(model, param_grid=par)
-    gs.fit(XTrain, YTrain)
-    print(gs.best_params_)
-    printEvalutation(XVal, YVal, gs)
+    model = elaborationWithRidge()
+    ridgeGridSearch = GridSearchCV(model, param_grid=parRidge)
+    ridgeGridSearch.fit(XTrain, YTrain)
+    print(ridgeGridSearch.best_params_)
+    EvalutationTable(ridgeGridSearch)
+    printEvalutation(XVal, YVal, ridgeGridSearch)
 
-    '''TODO non ho internet e non so quali sono i valori da dare ad alpha
-    print("Perceptron")
-    parNR = {
-        "scaler__alpha": [1,2,6,8],
-    }
-    Pipeline([("scaler",  StandardScaler()),
-            ("model",  Perceptron(penalty="l2", alpha=0.0005, max_iter=10))])
-    gs = GridSearchCV(model, param_grid=par)
-    gs.fit(XTrain, YTrain)
-    print(gs.best_params_)
-    printEvalutation(XVal, YVal, gs)
-'''
 
 def dataElaboration(dataFrame):
     Y = dataFrame["cnt"]
