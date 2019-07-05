@@ -1,0 +1,639 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Progetto di Applicazioni Data Intensive 2018/2019\n",
+    "\n",
+    "\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Descrizione del problema"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Il problema da noi analizzato si pone l'obbiettivo di prevedere per conto di una società che effettua bike sharing (ossia una forma di affitto di biciclette automatizzato) il numero di biciclette che saranno affittate durante una giornata che presenta determinate caratteristiche."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Il dataset denominato \"Bike Sharing Data Set\" è stato scaricato dal sito https://archive.ics.uci.edu/ml e si compone di 731 istanze, 16 diversi attributi di cui 2 identificatori e 3 possibili soggetti di predizione."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import os.path\n",
+    "import csv\n",
+    "import pandas as pd\n",
+    "if os.path.exists(\"day.csv\"):\n",
+    "    ds = pd.read_csv(\"day.csv\", sep=\",\")\n",
+    "else:\n",
+    "    print(\"File non trovato\")\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "len(ds.columns)\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Descrizione variabili\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "__instant__: indice dei record.<br>\n",
+    "__dteday__: data.<br>\n",
+    "__season__: stagione<br>\n",
+    "__yr__:  anno (0: 2011, 1: 2012) <br> \n",
+    "__mnth__: mese (1 - 12) <br>\n",
+    "__holiday__: giorno festivo (1: si, 0: no)<br>\n",
+    "__weekday__: giorno della settimana (0 - 6)<br>\n",
+    "__workingaday__: se il giorno è festivo o appartiene al weekend 0, altrimenti 1<br>\n",
+    "__wheathersit__: condizioni meteo generali della giornata:\n",
+    "* 1: soleggiato, poco nuvoloso\n",
+    "* 2: nuvoloso, nebbia\n",
+    "* 3: leggera neve, leggera pioggia\n",
+    "* 4: neve, pioggia, fulmini <br> \n",
+    "\n",
+    "__temp__: temperatura media giornaliera (C) normalizzata. Valori divisi per 41. <br>\n",
+    "__atemp__: temperatura perepita (°C) normaizzata. Valori divisi per 50<br>\n",
+    "__hum__: percentuale di umidità<br>\n",
+    "__windspeed__: velocità del vento normalizzata, Valori divisi per 67. <br>\n",
+    "__casual__: numero di utenti casuali<br>\n",
+    "__registered__: numero di utenti registrati<br>\n",
+    "__cnt__: numero di utenti totali<br>"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "La variabile che abbiamo scelto per effettuare la predizione è la variabile \"cnt\" i quanto a fini di ricerca di mercato è la variabile che più interessa. escludendo dagli attributi le colonne \"casual\" e \"registered\" che di cui \"cnt\" è la somma."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "ds.set_index([\"dteday\"], inplace=True)\n",
+    "dataset = ds.drop([\"casual\", \"registered\",\"instant\"], axis=1)\n",
+    "Y = dataset[\"cnt\"]"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Analisi esplorativa"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Una analisi dei vari attibuti si può avere attraverso la funzione _describe_ \n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "dataset.describe()\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "dataset.info(memory_usage=\"deep\")\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "le seguanti funzioni consentono di calcolare la correlazione tra due serie e il grafico relativo:\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import numpy as np\n",
+    "def getCorrelation(feature1, feature2):\n",
+    "    return np.mean((feature1-feature1.mean()) * (feature2-feature2.mean())) / (feature1.std() * feature2.std())\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import matplotlib.pyplot as plot\n",
+    "def plotData(x, y, XAxisName, YAxisName):\n",
+    "    plot.scatter(x, y)\n",
+    "    plot.grid()\n",
+    "    plot.xlabel(XAxisName); plot.ylabel(YAxisName)\n",
+    "    plot.show()\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Mentre con la seguente si può ottenere una serie ordinata che indica la correlazione tra \"cnt\" e il nostro dataset indicizzato su \"dtaday\", un histogramma di ogni attributo, e un grafico a dispersione di ogni feature con l'obbiettivo\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def correlationRank(dataset, feature):\n",
+    "    correlation = []\n",
+    "    for a in dataset.columns:\n",
+    "        correlation.append(getCorrelation(dataset[a].astype(\"float\"), feature))\n",
+    "        plotData(dataset[a].astype(\"float\"), feature, a, \"Byke Rent\")\n",
+    "    cor = pd.Series(correlation, dataset.columns)\n",
+    "    cor.sort_values(ascending=False, inplace=True)\n",
+    "    return cor\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "cor = correlationRank(dataset.drop([\"cnt\"], axis=1),dataset[\"cnt\"])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "print(cor)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Dai grafici e dal calcolo della correlazione scopriamo che gli attributi weekday workingday e holiday sono attributi poco importanti per il calcolo.\n",
+    "Nonostante ciò essendo la correlazione un calcolo su un coefficente di primo grado questi attributi poco correlati non vengono esclusi dal calcolo in quanto questo si baserà verosimilmente su un algoritmo polinomiale."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Preaparazione dei dati"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Molti dei dati sono già stati standardizzati alla creazione del dataset, i dati che normalmente vengono presentati come categorici sono già forniti in forma numerica"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "I dati che necessitano di standardidazione verranno elaborati successivamente in ogni Pipeline attraverso la funzione di sklearn _StandardScaler_"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "essendo questo un problema di regressione calcoliamo con la norma L1 le feature più rilevanti ma prima dividiamo il dataset in trainSet e ValidationSet\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "from sklearn.model_selection import train_test_split\n",
+    "Y = dataset[\"cnt\"]\n",
+    "X = dataset.drop([\"cnt\"], axis=1)\n",
+    "XTrain, XVal, YTrain, YVal = train_test_split(X, Y, test_size=0.33, random_state=73)\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "from sklearn.pipeline import Pipeline\n",
+    "from sklearn.preprocessing import StandardScaler, PolynomialFeatures\n",
+    "from sklearn.linear_model import Lasso\n",
+    "\n",
+    "def elaborationWithLasso(degeePipe=1, alphaPipe=0):\n",
+    "    return Pipeline([(\"poly\", PolynomialFeatures(degree=degeePipe, include_bias=False)),\n",
+    "                    (\"scale\",  StandardScaler()),\n",
+    "                    (\"linreg\", Lasso(alpha=alphaPipe, max_iter=6000, tol=0.005))])\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def showZerosFeatures(XTrain, YTrain):\n",
+    "    model = elaborationWithLasso(1, 2)\n",
+    "    model.fit(XTrain, YTrain)\n",
+    "    tmp = pd.Series(model.named_steps[\"linreg\"].coef_, XTrain.columns)\n",
+    "    print(tmp)\n",
+    "    a = []\n",
+    "    for row in tmp.index:\n",
+    "        if(tmp[row]==0):\n",
+    "            a.append(row)\n",
+    "    print(a)\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "showZerosFeatures(XTrain, YTrain)\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Prima di decidere se mantenere o no la colonna \"temp\" valutiamo la bontà del modello attraverso il calcolo del coefficiente $R^2$, dell' errore relativo e dell'errore quadratico medio."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def relativeError(YTrue, YPred):\n",
+    "    return np.mean(np.abs((YTrue - YPred) / YTrue))\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "from sklearn.metrics import mean_squared_error\n",
+    "def printEvalutation(X, Y, model):\n",
+    "    print(\"Mean squared error    : {:.5}\".format(mean_squared_error(model.predict(X), Y)))\n",
+    "    print(\"Relative error        : {:.5%}\".format(relativeError(model.predict(X), Y)))\n",
+    "    print(\"R-squared coefficient : {:.5}\".format(model.score(X, Y)))\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "model = elaborationWithLasso(3, 8)\n",
+    "model.fit(XTrain, YTrain)\n",
+    "printEvalutation(XVal, YVal, model)\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Il risultato è buono ma sono possibili miglioramenti per cui non andremo ad escludere manualmente gli attributi che la norma L1 azzera ma piuttosto riuseremo la norma successivamente."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Generazione modelli di learning\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Generiamo adesso diversi modelli di learning utilizzando k (nested) cross fold validation applicata ad una grid search."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Definiamo innanzitutto le pipeline di ogni modello.\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Il modello Ridge è un modello di regressione lineare che applica $ \\Vert \\theta \\Vert_2^2 = \\sum_{i=1}^n  \\theta _i ^2$ ossia la norma l2 in modo da regolarizzare le dimensioni dei coefficienti del modello.\n",
+    "Questo permette di ridurre le oscillazione ed aumentare l'accuratezza del modello"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "from sklearn.linear_model import Ridge\n",
+    "\n",
+    "def elaborationWithRidge():\n",
+    "    return Pipeline([(\"poly\", PolynomialFeatures(include_bias=False)),\n",
+    "                    (\"scale\",  StandardScaler()),   \n",
+    "                    (\"linreg\", Ridge())])"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Il modello Elastic Net è un modello di regressione lineare che applica si la norma l1 sia la norma l2 in questo modo $ \\alpha \\Vert \\theta \\Vert_1 + (1 - \\alpha) \\Vert \\theta \\Vert_2$.\n",
+    "l'iperparametro $\\alpha$ indica quanto il modello è \"sbilanciato verso la norma L1"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "from sklearn.linear_model import ElasticNet\n",
+    "\n",
+    "def elaborationWithElasticNet():\n",
+    "    return Pipeline([(\"poly\",   PolynomialFeatures(include_bias=False)),\n",
+    "                     (\"scale\",  StandardScaler()),\n",
+    "                     (\"linreg\",  ElasticNet(tol = 0.05, max_iter = 6000))])"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Creiamo anche un modello di regressione lineare senza restrizioni"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "from sklearn.linear_model import LinearRegression\n",
+    "\n",
+    "def elaborationWithoutRestrain():\n",
+    "    return Pipeline([(\"poly\",  PolynomialFeatures(include_bias=False)),\n",
+    "                    (\"scale\",  StandardScaler()),\n",
+    "                    (\"linreg\", LinearRegression())])"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Ora definiamo il grado e gli iperparametri migliori attraverso una gridsearch con cross validation e addestriamo i modelli"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "from sklearn.model_selection import GridSearchCV\n",
+    "\n",
+    "parRidge = {\n",
+    "    \"poly__degree\": [1,6,8],\n",
+    "    \"linreg__alpha\":  [1,2,6]\n",
+    "}\n",
+    "model = elaborationWithRidge()\n",
+    "ridgeGridSearch = GridSearchCV(model, param_grid=parRidge)\n",
+    "ridgeGridSearch.fit(XTrain, YTrain)\n",
+    "print(ridgeGridSearch.best_params_)\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "parLasso = {\n",
+    "    \"poly__degree\": [1,6,5],\n",
+    "    \"linreg__alpha\":  [1,2,8]\n",
+    "}\n",
+    "LassoModel = elaborationWithLasso()\n",
+    "lassoGridSearch = GridSearchCV(LassoModel, param_grid=parLasso)\n",
+    "lassoGridSearch.fit(XTrain, YTrain)\n",
+    "print(lassoGridSearch.best_params_)\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "parNet = {\n",
+    "    \"poly__degree\": [1,2,6],\n",
+    "    \"linreg__alpha\": [1,2,8],\n",
+    "    \"linreg__l1_ratio\": [0.1, 0.5, 1.0]\n",
+    "}\n",
+    "NETmodel = elaborationWithElasticNet()\n",
+    "gs = GridSearchCV(NETmodel, param_grid=parNet)\n",
+    "gs.fit(XTrain, YTrain)\n",
+    "print(gs.best_params_)\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "parNR = {\n",
+    "   \"poly__degree\": [1,2],\n",
+    "}\n",
+    "NRmodel = elaborationWithoutRestrain()\n",
+    "NRGridSearch = GridSearchCV(NRmodel, param_grid=parNR)\n",
+    "NRGridSearch.fit(XTrain, YTrain)\n",
+    "print(NRGridSearch.best_params_)\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Valutazione modelli\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Valutiamo ora i modelli ricavati nel punto precedente attraverso le metriche gia introdotte di $R^2$, errore relativo e errore quadratico medio. aggiungiamo alla valutazione una tabella ottenuta attraverso l'attributo *cv_results* di _GridSearchCV_ in modo da verificare quali parametri hanno portato un risultato migliore nei vari tipi di regressione. "
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def EvalutationTable(results):\n",
+    "    return pd.DataFrame(results.cv_results_).sort_values(\"mean_test_score\", ascending=False)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "printEvalutation(XVal, YVal, lassoGridSearch)\n",
+    "EvalutationTable(lassoGridSearch)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "printEvalutation(XVal, YVal, ridgeGridSearch)\n",
+    "EvalutationTable(ridgeGridSearch)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "printEvalutation(XVal, YVal, NRGridSearch)\n",
+    "EvalutationTable(NRGridSearch)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "printEvalutation(XVal, YVal, gs)\n",
+    "EvalutationTable(gs)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {
+    "scrolled": false
+   },
+   "source": [
+    "definiamo come modelli migliori i seguenti: <br>\n",
+    "* regressione con lasso di grado 6 e con $\\lambda$ = 8\n",
+    "* regressione con lasso di grado 6 e con $\\lambda$ = 5\n",
+    "* regressione con Elastic net di grado 6 con $\\lambda = 2$ e $\\alpha = 0.5$\n",
+    " \n",
+    "che presentano rispettivamente:\n",
+    "....."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "LassoModel1 = Pipeline([(\"poly\", PolynomialFeatures(degree=6, include_bias=False)),\n",
+    "                        (\"scale\",  StandardScaler()),\n",
+    "                        (\"linreg\", Lasso(alpha=8, max_iter=6000, tol=0.005))])\n",
+    "\n",
+    "LassoModel2 = Pipeline([(\"poly\", PolynomialFeatures(degree=6, include_bias=False)),\n",
+    "                        (\"scale\",  StandardScaler()),\n",
+    "                        (\"linreg\", Lasso(alpha=5, max_iter=6000, tol=0.005))])\n",
+    "\n",
+    "ENModel = Pipeline([(\"poly\",   PolynomialFeatures(degree = 6, include_bias=False)),\n",
+    "                     (\"scale\",  StandardScaler()),\n",
+    "                     (\"linreg\",  ElasticNet(alpha=2, l1_ratio=0.5, tol = 0.05, max_iter = 6000))])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.6.0"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 2
+}
